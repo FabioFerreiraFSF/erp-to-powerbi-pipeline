@@ -1,0 +1,63 @@
+// Core measures for the ERP to Power BI model.
+// Relationships: fact_transactions[accrual_date] -> dim_date[date] (active),
+// fact_transactions[category_id] + [company] -> dim_category (via a CategoryKey column),
+// fact_transactions[company] -> dim_company[code].
+
+Revenue =
+CALCULATE (
+    SUM ( fact_transactions[amount] ),
+    dim_category[type] = "revenue",
+    dim_category[in_pnl] = TRUE ()
+)
+
+Expenses =
+CALCULATE (
+    SUM ( fact_transactions[amount] ),
+    dim_category[type] = "expense",
+    dim_category[in_pnl] = TRUE ()
+)
+
+Operating Result = [Revenue] - [Expenses]
+
+Operating Margin % = DIVIDE ( [Operating Result], [Revenue] )
+
+Revenue YTD = TOTALYTD ( [Revenue], dim_date[date] )
+
+Operating Result YTD = TOTALYTD ( [Operating Result], dim_date[date] )
+
+Revenue MoM % =
+VAR PreviousMonth = CALCULATE ( [Revenue], DATEADD ( dim_date[date], -1, MONTH ) )
+RETURN DIVIDE ( [Revenue] - PreviousMonth, PreviousMonth )
+
+// Cash flow uses the payment date (inactive relationship) instead of the accrual date.
+Cash In =
+CALCULATE (
+    SUM ( fact_transactions[amount_paid] ),
+    fact_transactions[type] = "revenue",
+    USERELATIONSHIP ( fact_transactions[payment_date], dim_date[date] )
+)
+
+Cash Out =
+CALCULATE (
+    SUM ( fact_transactions[amount_paid] ),
+    fact_transactions[type] = "expense",
+    USERELATIONSHIP ( fact_transactions[payment_date], dim_date[date] )
+)
+
+Net Cash Flow = [Cash In] - [Cash Out]
+
+Receivables Open =
+CALCULATE ( SUM ( fact_transactions[amount_open] ), fact_transactions[type] = "revenue" )
+
+Payables Open =
+CALCULATE ( SUM ( fact_transactions[amount_open] ), fact_transactions[type] = "expense" )
+
+Overdue Receivables =
+CALCULATE (
+    SUM ( fact_transactions[amount_open] ),
+    fact_transactions[type] = "revenue",
+    fact_transactions[status] = "overdue"
+)
+
+Entries Without Category =
+CALCULATE ( COUNTROWS ( fact_transactions ), fact_transactions[category_id] = BLANK () )

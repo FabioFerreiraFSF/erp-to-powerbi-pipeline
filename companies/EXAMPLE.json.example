@@ -1,0 +1,6 @@
+{
+  "code": "NWA",
+  "name": "Northwind Advisory LLC",
+  "client_id": "your-client-id-from-the-conta-azul-developer-portal",
+  "client_secret": "your-client-secret"
+}

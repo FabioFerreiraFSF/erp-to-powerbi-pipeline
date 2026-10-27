@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Pipeline: credentials, tokens and real exported data never go to Git
+companies/*.json
+tokens/
+data_powerbi/
