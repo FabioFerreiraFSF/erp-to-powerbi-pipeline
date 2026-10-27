@@ -68,11 +68,16 @@ def access_token(company: config.Company) -> str:
     return new["access_token"]
 
 
-def code_from_url(text: str) -> str | None:
-    """Accepts the full redirect URL or just the code."""
+def code_from_url(text: str, state: str | None = None) -> str | None:
+    """Accepts the full redirect URL, its query string, or just the code.
+    When the pasted URL carries a state, it must match the one this login sent."""
     text = text.strip()
-    if text.startswith("http"):
-        return parse_qs(urlparse(text).query).get("code", [None])[0]
+    if "?" in text or text.startswith("http"):
+        query = parse_qs(urlparse(text if "://" in text else "https://x/?" + text.split("?", 1)[-1]).query)
+        if state and query.get("state", [state])[0] != state:
+            print("That URL is from another login attempt (state does not match). Ignored.")
+            return None
+        return query.get("code", [None])[0]
     return text or None
 
 
@@ -109,7 +114,7 @@ def login(company: config.Company, timeout: int = 300) -> None:
     def manual():
         while not received.is_set():
             try:
-                code = code_from_url(input("If the browser did not come back, paste the final URL here: "))
+                code = code_from_url(input("If the browser did not come back, paste the final URL here: "), state)
             except EOFError:
                 return
             if code:

@@ -129,6 +129,9 @@ def test_token_is_refreshed_when_expired(tmp_path, monkeypatch):
     assert sent == {"grant_type": "refresh_token", "refresh_token": "r1"}
     assert json.loads(company.token_file.read_text())["refresh_token"] == "r1"   # kept when not resent
     assert auth.code_from_url("http://127.0.0.1:5000/callback?code=abc&state=x") == "abc"
+    assert auth.code_from_url("https://www.contaazul.com/?code=abc&state=x", state="x") == "abc"
+    assert auth.code_from_url("https://www.contaazul.com/?code=abc&state=y", state="x") is None
+    assert auth.code_from_url("?code=abc") == "abc" and auth.code_from_url("abc") == "abc"
 
 
 def test_date_windows_respect_the_365_day_limit():
