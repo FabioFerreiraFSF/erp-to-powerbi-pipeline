@@ -16,7 +16,7 @@ Most small and mid-size companies run their finances in a cloud ERP, but the ERP
 
 | Step | Detail |
 | --- | --- |
-| 1. Extract | Reads every company of the group through the ERP's REST API (OAuth 2.0, read-only), with paging and automatic retry when the API is busy. |
+| 1. Extract | Reads every company of the group through the ERP's REST API (OAuth 2.0, read-only). Handles paging, the API's 365-day limit on date filters, retries when the API is busy, and fetches installment details in parallel to get the bank account and payment date. |
 | 2. Normalize | Maps the ERP's fields to one English schema, so all companies land in the same tables. |
 | 3. Load | Writes a star schema as CSV files: one fact table of transactions plus category, cost center, bank account, company and date dimensions. |
 | 4. Check | Flags entries that would distort the report: no category, expenses with no cost center, payments with no bank account, no customer or vendor, overdue items. |
@@ -64,7 +64,7 @@ Then point Power BI at the `data_powerbi/` folder (see [`powerbi/README.md`](pow
 
 ## Use it with Conta Azul
 
-1. Create an app in the Conta Azul developer portal and register the redirect URL `http://127.0.0.1:5000/callback`.
+1. Create an app in the Conta Azul developer portal and register the redirect URL `http://127.0.0.1:5000/callback`. If your app uses another redirect URL (such as `https://www.contaazul.com` in development mode), set `REDIRECT_URI` in `.env`; after you log in, paste the final URL from the browser into the terminal.
 2. Copy `companies/EXAMPLE.json.example` to `companies/<CODE>.json` (one file per company) and fill in the client ID and secret.
 3. Log in once per company: `python -m pipeline.auth <CODE>`. The browser opens, you approve, and the tokens are saved in `tokens/`.
 4. Run `python -m pipeline` (all companies) or `python -m pipeline --company <CODE>`.
@@ -106,7 +106,7 @@ tests/               pytest suite (runs on every push)
 pytest -q
 ```
 
-The suite checks the sample data, the field mapping, the data-quality rules, API paging with rate-limit retries, token refresh and a full demo run. It runs on GitHub Actions on Python 3.10 and 3.12.
+The suite checks the sample data, the field mapping, the data-quality rules, API paging with rate-limit retries, the 365-day date windows, installment details, token refresh and a full demo run. It runs on GitHub Actions on Python 3.10 and 3.12.
 
 ## About
 

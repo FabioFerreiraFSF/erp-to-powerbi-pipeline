@@ -129,3 +129,23 @@ def test_token_is_refreshed_when_expired(tmp_path, monkeypatch):
     assert sent == {"grant_type": "refresh_token", "refresh_token": "r1"}
     assert json.loads(company.token_file.read_text())["refresh_token"] == "r1"   # kept when not resent
     assert auth.code_from_url("http://127.0.0.1:5000/callback?code=abc&state=x") == "abc"
+
+
+def test_date_windows_respect_the_365_day_limit():
+    from datetime import date
+    from pipeline.connectors.conta_azul import windows
+    parts = list(windows(date(2024, 1, 1), date(2026, 12, 31)))
+    assert parts[0][0] == date(2024, 1, 1) and parts[-1][1] == date(2026, 12, 31)
+    assert all((b - a).days <= 364 for a, b in parts)
+    assert all((parts[i + 1][0] - parts[i][1]).days == 1 for i in range(len(parts) - 1))   # no gaps, no overlap
+
+
+def test_installment_detail_fields():
+    from pipeline.connectors.conta_azul import installment_fields
+    settled = {"baixas": [{"conta_financeira": {"id": "acc-9"}, "data_pagamento": "2026-03-02",
+                           "metodo_pagamento": "PIX"}]}
+    assert installment_fields(settled) == {"conta_financeira_id": "acc-9", "metodo_pagamento": "PIX",
+                                           "data_pagamento": "2026-03-02"}
+    planned = {"conta_financeira": {"id": "acc-1"}, "metodo_pagamento": "BOLETO"}
+    assert installment_fields(planned)["conta_financeira_id"] == "acc-1"
+    assert installment_fields(planned)["data_pagamento"] == ""
